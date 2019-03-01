@@ -116,7 +116,7 @@ class ImageImporter
         $articleImage->setRelations($image['relations']);
 
         $article->setImages($articleImage);
-
+        $this->logger->error($uploadFile . ' width: ' . $width);
         $this->em->persist($media);
         $this->em->persist($article);
         $this->em->persist($articleImage);

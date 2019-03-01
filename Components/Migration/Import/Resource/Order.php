@@ -88,41 +88,53 @@ class Order extends AbstractResource
         $call = array_merge($this->Request()->getPost(), $this->Request()->getQuery());
         $offset = $this->getProgress()->getOffset();
 
-        $result = $this->Source()->queryOrders($offset);
-
-        if (empty($result)) {
-            return $this->getProgress()->done();
-        }
-
-        $count = $result->rowCount() + $offset;
-        $this->getProgress()->setCount($count);
+//        $result = $this->Source()->queryOrders($offset);
+//
+//        if (empty($result)) {
+//            return $this->getProgress()->done();
+//        }
+//
+//        $count = $result->rowCount() + $offset;
+//        $this->getProgress()->setCount($count);
+        $this->getProgress()->setCount(50000);
 
         $this->initTaskTimer();
 
-        if ($call['profile'] !== 'WooCommerce') {
-            while ($order = $result->fetch()) {
-                $this->migrateOrder($order);
-            }
-        } elseif ($call['profile'] === 'WooCommerce') {
-            $normalizer = new WooCommerce();
-            $normalizedOrders = $normalizer->normalizeOrders($result->fetchAll());
-
-            foreach ($normalizedOrders as $order) {
-                $orderAmounts = $this->Source()->queryOrderAmounts($order)->fetchAll();
-                $order['invoice_amount'] = $orderAmounts[0]['invoice_amount'];
-
-                if (array_key_exists('orderTaxRate', $order)) {
-                    $order['invoice_amount'] = $order['invoice_amount'] + $order['orderTaxRate'];
-                }
-
-                if (array_key_exists('invoice_shipping_net', $order)) {
-                    $order['invoice_shipping'] = $order['invoice_shipping_net'] + $order['shippingTax'];
-                    $order['invoice_amount'] = $order['invoice_amount'] + $order['invoice_shipping'];
-                }
-
+        $c = 500;
+        for($i=0;$i<=1000;$i++){
+            $resultOffset = $i*$c;
+            $result = $this->Source()->queryOrders($c,$resultOffset);
+            $limitedOrders = $result->fetchAll();
+            $j = count($limitedOrders);
+            foreach( $limitedOrders as $order) {
                 $this->migrateOrder($order);
             }
         }
+
+//        if ($call['profile'] !== 'WooCommerce') {
+//            while ($order = $result->fetch()) {
+//                $this->migrateOrder($order);
+//            }
+//        } elseif ($call['profile'] === 'WooCommerce') {
+//            $normalizer = new WooCommerce();
+//            $normalizedOrders = $normalizer->normalizeOrders($result->fetchAll());
+//
+//            foreach ($normalizedOrders as $order) {
+//                $orderAmounts = $this->Source()->queryOrderAmounts($order)->fetchAll();
+//                $order['invoice_amount'] = $orderAmounts[0]['invoice_amount'];
+//
+//                if (array_key_exists('orderTaxRate', $order)) {
+//                    $order['invoice_amount'] = $order['invoice_amount'] + $order['orderTaxRate'];
+//                }
+//
+//                if (array_key_exists('invoice_shipping_net', $order)) {
+//                    $order['invoice_shipping'] = $order['invoice_shipping_net'] + $order['shippingTax'];
+//                    $order['invoice_amount'] = $order['invoice_amount'] + $order['invoice_shipping'];
+//                }
+//
+//                $this->migrateOrder($order);
+//            }
+//        }
 
         // Force import of order details in the next step
         $this->getProgress()->addRequestParam('import_order_details', true);

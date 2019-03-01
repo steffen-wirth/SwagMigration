@@ -679,12 +679,12 @@ abstract class Profile extends Enlight_Class
      *
      * @return \Zend_Db_Statement_Interface
      */
-    public function queryOrders($offset = 0)
+    public function queryOrders($count = 500, $offset = 1)
     {
         $sql = $this->getOrderSelect();
-        if (!empty($offset)) {
-            $sql = $this->limit($sql, null, $offset);
-        }
+//        if (!empty($offset)) {
+            $sql = $this->limit($sql, $count, $offset);
+//        }
 
         return $this->db->query($sql);
     }

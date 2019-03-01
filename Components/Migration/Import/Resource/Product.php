@@ -101,11 +101,15 @@ class Product extends AbstractResource
         $call = array_merge($this->Request()->getPost(), $this->Request()->getQuery());
         $products = $this->Source()->queryProducts($offset);
 
-        $this->getProgress()->setCount($products->rowCount() + $offset);
+        if ($call['profile'] == 'Magento') {
+            $this->getProgress()->setCount(count($products));
+        } else {
+            $this->getProgress()->setCount($products->rowCount() + $offset);
+        }
 
         $this->initTaskTimer();
 
-        if ($call['profile'] !== 'WooCommerce') {
+        if ($call['profile'] !== 'WooCommerce' && $call['profile'] !== 'Magento' ) {
             $prodArr = $products->fetchAll();
 
             if (empty($prodArr)) {
@@ -115,6 +119,18 @@ class Product extends AbstractResource
             foreach ($prodArr as $id => $product) {
                 $this->migrateProduct($product, $numberValidationMode, $db, $import, $numberSnippet, $call);
             }
+        } elseif ($call['profile'] == 'Magento') {
+
+            $prodArr = $products;
+
+            if (empty($prodArr)) {
+                return $this->getProgress()->done();
+            }
+
+            foreach ($prodArr as $id => $product) {
+                $this->migrateProduct($product, $numberValidationMode, $db, $import, $numberSnippet, $call);
+            }
+
         } elseif ($call['profile'] === 'WooCommerce') {
             $normalizer = new WooCommerce();
             $normalizedProducts = $normalizer->normalizeProducts($products->fetchAll());

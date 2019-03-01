@@ -66,7 +66,7 @@ class Property extends AbstractResource
         while ($product = $result->fetch()) {
             // Skip products which have not been imported before
             $productId = $this->getBaseArticleInfo($product['productID']);
-            if ($productId === false) {
+            if (false === $productId) {
                 $this->increaseProgress();
                 continue;
             }
@@ -96,7 +96,11 @@ class Property extends AbstractResource
 
                 // Create new element or extend existing
                 if (!array_key_exists($property['option'], $options)) {
-                    $options[$property['option']] = ['name' => $property['option'], 'values' => [['value' => $property['value']]]];
+                    if(!empty($property['label'])){
+                        $options[$property['option']] = ['name' => $property['label'], 'values' => [['value' => $property['value']]]];
+                    } else {
+                        $options[$property['option']] = ['name' => $property['option'], 'values' => [['value' => $property['value']]]];
+                    }
                 } else {
                     $options[$property['option']]['values'][] = ['value' => $property['value']];
                 }
@@ -177,13 +181,13 @@ class Property extends AbstractResource
             return;
         }
 
-        if ($groupId === false && isset($group['name'])) {
+        if (false == $groupId && isset($group['name'])) {
             $sql = 'INSERT INTO `s_filter` (`name`, `position`, `comparable`, `sortmode`) VALUES(?, ?, ?, ?)';
             Shopware()->Db()->query($sql, [$group['name'], $group['position'], $group['comparable'], $group['sortmode']]);
             $groupId = Shopware()->Db()->lastInsertId();
         }
 
-        if ($groupId === false) {
+        if (false === $groupId) {
             error_log('no group found');
 
             return false;
@@ -204,16 +208,18 @@ class Property extends AbstractResource
                 $optionId = Shopware()->Db()->fetchOne($sql, [$option['id']]);
             } elseif (isset($option['name'])) {
                 // First try to get option by name with associated group
-                $sql = 'SELECT o.`id` FROM `s_filter_options` o
-                        INNER JOIN `s_filter_relations` r
-                        ON r.groupID = ? AND r.optionID = o.id WHERE o.`name` = ?';
-
-                Shopware()->Db()->exec("SET NAMES 'utf8' COLLATE 'utf8_general_ci'");
-
+                $sql = '
+					SELECT o.`id`
+					FROM `s_filter_options` o
+					INNER JOIN `s_filter_relations` r
+					ON r.groupID = ?
+					AND r.optionID = o.id
+					WHERE o.`name` = ?
+					';
                 $optionId = Shopware()->Db()->fetchOne($sql, [$groupId, $option['name']]);
 
                 // Then try to find option by name ignoring associated groups
-                if ($optionId === false) {
+                if (false === $optionId) {
                     $sql = '
 						SELECT o.`id`
 						FROM `s_filter_options` o
@@ -225,13 +231,13 @@ class Property extends AbstractResource
             }
 
             // Create option
-            if ($optionId === false && isset($option['name'])) {
+            if (false == $optionId && isset($option['name'])) {
                 $sql = 'INSERT INTO `s_filter_options` (`name`, `filterable`) VALUES(?, ?)';
                 Shopware()->Db()->query($sql, [$option['name'], $option['filterable']]);
                 $optionId = Shopware()->Db()->lastInsertId();
             }
 
-            if ($optionId === false) {
+            if (false === $optionId) {
                 error_log('option not found');
 
                 return false;
@@ -253,7 +259,6 @@ class Property extends AbstractResource
                     $valueId = Shopware()->Db()->fetchOne($sql, [$value['id']]);
                 } elseif (isset($value['value'])) {
                     // Try to get value by value with associated option
-
                     $sql = '
 						SELECT v.`id`
 						FROM `s_filter_values` v
@@ -264,13 +269,13 @@ class Property extends AbstractResource
                 }
 
                 // Create option
-                if ($valueId === false && isset($value['value'])) {
+                if (false == $valueId && isset($value['value'])) {
                     $sql = 'INSERT INTO `s_filter_values` (`value`, `optionId`, `position`) VALUES(?, ?, ?)';
                     Shopware()->Db()->query($sql, [$value['value'], $optionId, $value['position']]);
                     $valueId = Shopware()->Db()->lastInsertId();
                 }
 
-                if ($valueId === false) {
+                if (false === $valueId) {
                     error_log('value not found');
 
                     return false;

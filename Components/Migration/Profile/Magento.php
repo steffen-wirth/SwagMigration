@@ -8,6 +8,7 @@
 
 namespace Shopware\SwagMigration\Components\Migration\Profile;
 
+use Shopware\PluginInfo\Backend\ArrayTestCase;
 use Shopware\SwagMigration\Components\Migration\Profile;
 use Zend_Db_Expr;
 
@@ -20,7 +21,7 @@ class Magento extends Profile
      */
     public function getProductImagePath()
     {
-        return '/media/catalog/product';
+        return 'media/catalog/product';
     }
 
     /**
@@ -63,6 +64,22 @@ class Magento extends Profile
      */
     public function getPropertyOptionSelect()
     {
+//        return "
+//			SELECT
+//
+//				eav.attribute_code as 'name',
+//				eav.attribute_code as 'id'
+//
+//			-- Attribute configuration
+//			FROM {$this->quoteTable('catalog_eav_attribute')} eav_settings
+//
+//			-- Actual attributes
+//            INNER JOIN {$this->quoteTable('eav_attribute')} eav
+//            ON eav.attribute_id=eav_settings.attribute_id
+//            AND eav.is_user_defined=1
+//
+//			WHERE  eav_settings.is_filterable = 1
+//		";
         return "
 			SELECT
 
@@ -76,8 +93,8 @@ class Magento extends Profile
             INNER JOIN {$this->quoteTable('eav_attribute')} eav
             ON eav.attribute_id=eav_settings.attribute_id
             AND eav.is_user_defined=1
-
-			WHERE  eav_settings.is_filterable = 1
+            
+            WHERE eav.attribute_code NOT IN ('package_id, is_bulk_size, bulkfee_factor, show_on_homepage, manufacturer')
 		";
     }
 
@@ -158,11 +175,44 @@ class Magento extends Profile
      */
     public function getProductPropertiesSelect($id)
     {
+//        return "
+//            SELECT
+//
+//				p.entity_id                             as productID,
+//                eav.attribute_code                      as 'option',
+//                option_value.value                      as 'value'
+//
+//            -- The actual product
+//            FROM  {$this->quoteTable('catalog_product_entity')} p
+//
+//            -- Maps Articles to attributes
+//            INNER JOIN {$this->quoteTable('catalog_product_entity_int')} entity_int
+//            ON entity_int.entity_id=p.entity_id
+//
+//            -- Actual attributes (groups) with names
+//            INNER JOIN {$this->quoteTable('eav_attribute')} eav
+//            ON eav.attribute_id=entity_int.attribute_id
+//            AND eav.is_user_defined=1
+//
+//			-- Only get filterable attributes
+////			INNER JOIN {$this->quoteTable('catalog_eav_attribute')} eav_settings
+////			ON eav_settings.attribute_id = eav.attribute_id
+////			AND eav_settings.is_filterable = 1
+//
+//            -- Joins article option relation
+//            INNER  JOIN {$this->quoteTable('eav_attribute_option_value')} option_value
+//            ON option_value.option_id=entity_int.value
+//            AND option_value.store_id=0
+//
+//            WHERE p.entity_type_id =  {$this->getEntityTypeId('catalog_product')}
+//            AND p.entity_id = {$id}
+//		";
         return "
             SELECT
 
 				p.entity_id                             as productID,
                 eav.attribute_code                      as 'option',
+                eav.frontend_label                      as 'label',
                 option_value.value                      as 'value'
 
             -- The actual product
@@ -176,11 +226,7 @@ class Magento extends Profile
             INNER JOIN {$this->quoteTable('eav_attribute')} eav
             ON eav.attribute_id=entity_int.attribute_id
             AND eav.is_user_defined=1
-
-			-- Only get filterable attributes
-			INNER JOIN {$this->quoteTable('catalog_eav_attribute')} eav_settings
-			ON eav_settings.attribute_id = eav.attribute_id
-			AND eav_settings.is_filterable = 1
+            AND eav.attribute_code NOT IN ('package_id, is_bulk_size, bulkfee_factor, show_on_homepage, manufacturer')
 
             -- Joins article option relation
             INNER  JOIN {$this->quoteTable('eav_attribute_option_value')} option_value
@@ -258,6 +304,21 @@ class Magento extends Profile
 			AND ea.attribute_code NOT IN ('cost', 'manufacturer')
 			ORDER BY `name`
 		";
+//        return "
+//			SELECT
+//				-- ea.attribute_id 	as `id`,
+//				ea.attribute_code 	as `id`,
+//				ea.frontend_label	as `name`,
+//				ea.backend_type 	as `type`,
+//				ea.is_required		as `required`
+//			FROM {$this->quoteTable('eav_attribute')} ea, {$this->quoteTable('eav_entity_type')} et
+//			WHERE ea.`entity_type_id`=et.entity_type_id
+//			AND et.entity_type_code='catalog_product'
+//			AND ea.frontend_input!=''
+//			AND (ea.attribute_code IN ('visibility', 'meta_description', 'meta_title', 'url_key','arbeitsstrom','wirkungsgrad','eingangsspannugnsarbeitsbereich'))
+//			AND ea.attribute_code NOT IN ('cost', 'manufacturer')
+//			ORDER BY `name`
+//		";
     }
 
     /**
@@ -310,7 +371,7 @@ class Magento extends Profile
             WHERE p.entity_type_id = {$this->getEntityTypeId('catalog_product')}
             AND p.entity_id = {$productId}
             AND (parent.type_id = 'configurable' OR p.type_id = 'configurable')
-            GROUP BY productID
+            GROUP BY productID, parentID
         ";
     }
 
@@ -319,7 +380,7 @@ class Magento extends Profile
      *
      * @return string {String} | sql for the articles
      */
-    public function getProductSelect()
+    public function getProductSelect($limitedAttributes)
     {
         $attributes = [
             'description',
@@ -335,7 +396,7 @@ class Magento extends Profile
         ];
 
         $custom_select = '';
-        foreach ($this->getAttributes() as $attributeID => $attribute) {
+        foreach ($limitedAttributes as $attributeID => $attribute) {
             $custom_select .= ",
 				$attributeID.value									as `$attributeID`";
             $attributes[] = $attributeID;
@@ -564,6 +625,7 @@ class Magento extends Profile
     {
         $attributes = [
             'gender',
+            'prefix',
             'firstname',
             'middlename',
             'lastname',
@@ -581,6 +643,7 @@ class Magento extends Profile
             'postcode',
             'street',
             'telephone',
+            'vat_id',
         ];
 
         return "
@@ -596,9 +659,9 @@ class Magento extends Profile
 				customer.group_id						as customergroupID,
 				firstname.value                         as firstname,
 				lastname.value                          as lastname,
-				IF(gender.value=2, 'ms', 'mr')			as salutation,
+				IF(STRCMP(prefix.value,'Frau')=0, 'ms', 'mr')			as salutation,
 
-				IF(gender.value=2, 'ms', 'mr')			as billing_salutation,
+				IF(STRCMP(prefix.value,'Frau')=0, 'ms', 'mr')			as billing_salutation,
 				company.value 							as billing_company,
 				TRIM(CONCAT(firstname.value, ' ', IFNULL(middlename.value, '')))
 														as billing_firstname,
@@ -606,24 +669,25 @@ class Magento extends Profile
 				street.value							as billing_street,
 				-- 										as billing_streetnumber,
 				city.value								as billing_city,
-				country_id.value						as billing_country,
+				country_id.value						as billing_countryiso,
 				postcode.value							as billing_zipcode,
-
-				''                          			as shipping_salutation,
-				''							            as shipping_company,
-				''							            as shipping_firstname,
-				'' 							            as shipping_lastname,
-				'' 							            as shipping_street,
-				''  									as shipping_streetnumber,
-				''								        as shipping_city,
-				''							            as shipping_countryiso,
-				''							            as shipping_zipcode,
+				vat_id.value							as billing_vat,
+				
+				IF(STRCMP(prefix.value,'Frau')=0, 'ms', 'mr') as shipping_salutation,
+				company.value							      as shipping_company,
+				TRIM(CONCAT(firstname.value, ' ', IFNULL(middlename.value, ''))) as shipping_firstname,
+				lastname.value 							as shipping_lastname,
+				street.value 							as shipping_street,
+				--  									as shipping_streetnumber,
+				city.value								as shipping_city,
+				country_id.value						as shipping_countryiso,
+				postcode.value							as shipping_zipcode,
 
 				telephone.value							as phone,
 				dob.value 								as birthday,
 				password_hash.value 					as md5_password,
 				'md5reversed'							as encoder,
-				taxvat.value 							as ustid,
+				IFNULL(taxvat.value, vat_id.value)		as ustid,
 				IF(newsletter.subscriber_id, 1, 0)		as newsletter
 
 			FROM {$this->quoteTable('customer_entity')} customer
@@ -681,7 +745,7 @@ class Magento extends Profile
 				ba.`city` 									as billing_city,
 				ba.`country_id`								as billing_countryiso,
 				ba.`postcode`								as billing_zipcode,
-				IF(o.`customer_gender`=2, 'ms', 'mr')		as billing_salutation,
+				IF(STRCMP(ba.`prefix`,'Frau')=0, 'ms', 'mr')		as billing_salutation,
 
 				sa.`company`								as shipping_company,
 				sa.`firstname`								as shipping_firstname,
@@ -692,16 +756,15 @@ class Magento extends Profile
 				sa.`city`									as shipping_city,
 				sa.`country_id`								as shipping_countryiso,
 				sa.`postcode`								as shipping_zipcode,
-				IF(o.`customer_gender`=2, 'ms', 'mr')		as shipping_salutation,
+				IF(STRCMP(sa.`prefix`,'Frau')=0, 'ms', 'mr')		as shipping_salutation,
 
 				o.`grand_total`-o.`tax_amount`				as invoice_amount_net,
 				o.`grand_total`								as invoice_amount,
 				o.`shipping_incl_tax`						as invoice_shipping,
 				o.`shipping_amount`							as invoice_shipping_net
 
-			FROM
-				{$this->quoteTable('sales_flat_quote')} q,
-				{$this->quoteTable('sales_flat_quote_payment')} p,
+			FROM			
+				{$this->quoteTable('sales_flat_order_payment')} p,
 				{$this->quoteTable('sales_flat_order', 'o')}
 			LEFT JOIN {$this->quoteTable('sales_flat_order_address')} ba
 			ON ba.parent_id=o.entity_id
@@ -709,9 +772,19 @@ class Magento extends Profile
 			LEFT JOIN {$this->quoteTable('sales_flat_order_address')} sa
 			ON sa.parent_id=o.entity_id
 			AND sa.address_type='shipping'
-			WHERE o.quote_id = q.entity_id
-			AND p.quote_id = q.entity_id
+			WHERE p.parent_id = o.entity_id
 		";
+
+//        FROM
+//				{$this->quoteTable('sales_flat_order_payment')} p,
+//				{$this->quoteTable('sales_flat_order','o')},
+//			LEFT JOIN {$this->quoteTable('sales_flat_order_address')} ba
+//			ON ba.parent_id=o.entity_id
+//    AND ba.address_type='billing'
+//			LEFT JOIN {$this->quoteTable('sales_flat_order_address')} sa
+//			ON sa.parent_id=o.entity_id
+//    AND sa.address_type='shipping'
+//			WHERE p.parent_id=o.entity_id
     }
 
     /**
@@ -814,5 +887,76 @@ class Magento extends Profile
 				FROM {$this->quoteTable($type . '_entity')} $type
 				$join_fields
 			";
+    }
+
+    /**
+     * Executes the profile product select statement with the given offset
+     * for MAGENTO
+     * with optimized query for too many left joins
+     *
+     * @param int $offset
+     *
+     * @return Array
+     */
+    public function queryProducts($offset = 0)
+    {
+        $products = [];
+
+        $attributes = $this->getAttributes();
+        $selectedAttributes = [];
+        $countOfAttributes = count($attributes);
+        $limit = 30;
+        $last = false;
+        $lastOffset = $limit;
+        $i = 0;
+
+        if ($countOfAttributes > $limit) {
+
+            foreach ($attributes as $key => $value) {
+
+                $selectedAttributes[$key] = $value;
+
+                if ( ($i+1) == $lastOffset || ($i+1) == $countOfAttributes) {
+                    $sql = $this->getProductSelect($selectedAttributes);
+
+                    if (!empty($offset)) {
+                        $sql = $this->limit($sql, null, $offset);
+                    }
+
+                    $productsDB = $this->db->query($sql)->fetchAll();
+
+                    if ($productsDB) {
+
+                        if(empty($products)){
+                            $products = array_merge($products, $productsDB);
+                        } else {
+                            foreach($productsDB as $key => $value){
+                                $products[$key] = array_merge($productsDB[$key], $products[$key]);
+                            }
+                        }
+                    }
+
+                    //set new Limit
+                    $lastOffset+= $limit;
+                    //clear attribute array
+                    $selectedAttributes = [];
+                }
+                $i++;
+            }
+
+            return $products;
+
+
+        } else {
+
+            $sql = $this->getProductSelect($attributes);
+
+            if (!empty($offset)) {
+                $sql = $this->limit($sql, null, $offset);
+            }
+
+           return $this->db->query($sql)->fetchAll();
+
+        }
     }
 }
