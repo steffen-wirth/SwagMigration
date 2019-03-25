@@ -659,9 +659,9 @@ class Magento extends Profile
 				customer.group_id						as customergroupID,
 				firstname.value                         as firstname,
 				lastname.value                          as lastname,
-				IF(STRCMP(prefix.value,'Frau')=0, 'ms', 'mr')			as salutation,
+				IF(STRCMP(prefix.value,'Frau')=0, 'ms', IF(STRCMP(prefix.value,'Herr')=0, 'mr', 'firm')	)			as salutation,
 
-				IF(STRCMP(prefix.value,'Frau')=0, 'ms', 'mr')			as billing_salutation,
+				IF(STRCMP(prefix.value,'Frau')=0, 'ms', IF(STRCMP(prefix.value,'Herr')=0, 'mr', 'firm')	)			as billing_salutation,
 				company.value 							as billing_company,
 				TRIM(CONCAT(firstname.value, ' ', IFNULL(middlename.value, '')))
 														as billing_firstname,
@@ -673,7 +673,7 @@ class Magento extends Profile
 				postcode.value							as billing_zipcode,
 				vat_id.value							as billing_vat,
 				
-				IF(STRCMP(prefix.value,'Frau')=0, 'ms', 'mr') as shipping_salutation,
+				IF(STRCMP(prefix.value,'Frau')=0, 'ms', IF(STRCMP(prefix.value,'Herr')=0, 'mr', 'firm')) as shipping_salutation,
 				company.value							      as shipping_company,
 				TRIM(CONCAT(firstname.value, ' ', IFNULL(middlename.value, ''))) as shipping_firstname,
 				lastname.value 							as shipping_lastname,
