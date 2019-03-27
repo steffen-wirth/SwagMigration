@@ -292,12 +292,14 @@ class CustomerImporter
                 }
             }
 
-            $customer['customernumber'] = $this->getCustomerNumber($customer['userID']);
+//            $customer['customernumber'] = $this->getCustomerNumber($customer['userID']);
+            $customer['customernumber'] = $customer['userID'];
 
             $customer = $this->newsletterSubscribe($customer, $quotedCustomerEmail);
         } else {
             $customer['userID'] = $isCustomer;
-            $customer['customernumber'] = $this->getCustomerNumber($customer['userID']);
+//            $customer['customernumber'] = $this->getCustomerNumber($customer['userID']);
+            $customer['customernumber'] = $customer['userID'];
 
             $customer = $this->newsletterSubscribe($customer, $quotedCustomerEmail);
         }
