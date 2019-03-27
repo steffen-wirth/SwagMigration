@@ -140,9 +140,9 @@ class Customer extends AbstractResource
     private function migrateCustomer($customer, $import, $salt)
     {
         if (isset($customer['customergroupID'])
-            && isset($this->Request()->customer_group[$customer['customergroupID']])
+            && isset($this->Request()->price_group[$customer['customergroupID']])
         ) {
-            $customer['customergroup'] = $this->Request()->customer_group[$customer['customergroupID']];
+            $customer['customergroup'] = $this->Request()->price_group[$customer['customergroupID']];
         }
         unset($customer['customergroupID']);
 
