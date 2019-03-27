@@ -158,6 +158,7 @@ class Customer extends AbstractResource
         if (!empty($customer['billing_countryiso'])) {
             $sql = 'SELECT `id` FROM `s_core_countries` WHERE `countryiso` = ?';
             $customer['billing_countryID'] = (int) Shopware()->Db()->fetchOne($sql, [$customer['billing_countryiso']]);
+            $customer['country_id'] = $customer['billing_countryID'];
         }
         if (isset($customer['shipping_countryiso'])) {
             $sql = 'SELECT `id` FROM `s_core_countries` WHERE `countryiso` = ?';
