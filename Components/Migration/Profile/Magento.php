@@ -650,7 +650,7 @@ class Magento extends Profile
 			SELECT
 
 				customer.entity_id						as customerID,
-				customer.increment_id					as customernumber,
+				customer.entity_id					as customernumber,
 				customer.email							as email,
 				customer.store_id						as subshopID,
 				customer.created_at						as firstlogin,
