@@ -101,11 +101,10 @@ class Order extends AbstractResource
         $this->initTaskTimer();
 
         $c = 500;
-        for($i=0;$i<=1000;$i++){
+        for($i=0;$i<=1500;$i++){
             $resultOffset = $i*$c;
             $result = $this->Source()->queryOrders($c,$resultOffset);
             $limitedOrders = $result->fetchAll();
-            $j = count($limitedOrders);
             foreach( $limitedOrders as $order) {
                 $this->migrateOrder($order);
             }
@@ -165,27 +164,39 @@ class Order extends AbstractResource
             "
         );
 
-        $result = $this->Source()->queryOrderDetails($offset);
-        $count = $result->rowCount() + $offset;
+        //        $count = $result->rowCount() + $offset;
+        $count = 50000;
         $this->getProgress()->setCount($count);
 
         $this->initTaskTimer();
 
-        if ($call['profile'] !== 'WooCommerce') {
-            while ($order = $result->fetch()) {
-                $this->migrateOrderDetail($order, $numberValidationMode, $numberSnippet);
-            }
-        } elseif ($call['profile'] === 'WooCommerce') {
-            $normalizer = new WooCommerce();
-            $normalizedOrderDetails = $normalizer->normalizeOrderDetails($result->fetchAll());
-
-            foreach ($normalizedOrderDetails as $order) {
-                $res = $this->Source()->queryOrderDetailArticleNumber($order)->fetch();
-                $order['article_ordernumber'] = $res['meta_value'];
-
+//        $result = $this->Source()->queryOrderDetails($offset);
+        $c = 500;
+        for($i=0;$i<=1500;$i++){
+            $resultOffset = $i*$c;
+            $result = $this->Source()->queryOrderDetails($c,$resultOffset);
+            $limitedOrders = $result->fetchAll();
+            foreach( $limitedOrders as $order) {
                 $this->migrateOrderDetail($order, $numberValidationMode, $numberSnippet);
             }
         }
+
+
+//        if ($call['profile'] !== 'WooCommerce') {
+//            while ($order = $result->fetch()) {
+//                $this->migrateOrderDetail($order, $numberValidationMode, $numberSnippet);
+//            }
+//        } elseif ($call['profile'] === 'WooCommerce') {
+//            $normalizer = new WooCommerce();
+//            $normalizedOrderDetails = $normalizer->normalizeOrderDetails($result->fetchAll());
+//
+//            foreach ($normalizedOrderDetails as $order) {
+//                $res = $this->Source()->queryOrderDetailArticleNumber($order)->fetch();
+//                $order['article_ordernumber'] = $res['meta_value'];
+//
+//                $this->migrateOrderDetail($order, $numberValidationMode, $numberSnippet);
+//            }
+//        }
 
         return $this->getProgress()->done();
     }
